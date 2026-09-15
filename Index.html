@@ -1,0 +1,225 @@
+<!doctype html>
+<html lang="es">
+<head>
+	<meta charset="utf-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1">
+	<meta name="description" content="Simulador educativo de atenuación pasiva y propagación radioeléctrica">
+	<title>Control pasivo de señal | Simulador RF</title>
+	<style>
+		:root {
+			--ink: #17221f;
+			--muted: #63726d;
+			--paper: #f5f5ef;
+			--panel: #fffdf7;
+			--line: #d9dfd8;
+			--green: #166b55;
+			--green-deep: #0e4c3d;
+			--lime: #cde66b;
+			--amber: #c97932;
+			--red: #b94b3b;
+			--shadow: 0 18px 45px rgba(20, 52, 43, .11);
+		}
+
+		* { box-sizing: border-box; }
+		body {
+			margin: 0;
+			color: var(--ink);
+			background: var(--paper);
+			font-family: Georgia, "Times New Roman", serif;
+			line-height: 1.45;
+		}
+		button, input, select { font: inherit; }
+		.shell { max-width: 1240px; margin: 0 auto; padding: 28px 22px 56px; }
+		.masthead {
+			display: flex; justify-content: space-between; gap: 28px; align-items: flex-end;
+			padding: 26px 0 30px; border-bottom: 1px solid var(--line);
+		}
+		.kicker { color: var(--green); font: 700 12px/1.2 Arial, sans-serif; letter-spacing: .13em; text-transform: uppercase; }
+		h1 { max-width: 730px; margin: 10px 0 0; font-size: clamp(2.3rem, 5vw, 4.8rem); line-height: .96; letter-spacing: -.04em; font-weight: 700; }
+		.intro { max-width: 370px; margin: 0; color: var(--muted); font-size: 1.02rem; }
+		.notice { margin: 24px 0; padding: 16px 18px; border-left: 5px solid var(--amber); background: #fff5e8; color: #6a3a1c; }
+		.notice strong { display: block; margin-bottom: 4px; font: 700 12px Arial, sans-serif; letter-spacing: .1em; text-transform: uppercase; }
+		.workspace { display: grid; grid-template-columns: minmax(300px, .8fr) minmax(440px, 1.2fr); gap: 24px; align-items: start; }
+		.panel { background: var(--panel); border: 1px solid var(--line); box-shadow: var(--shadow); }
+		.controls { padding: 23px; }
+		.panel-title { display: flex; justify-content: space-between; align-items: baseline; gap: 16px; margin: 0 0 20px; font-size: 1.35rem; }
+		.eyebrow { color: var(--muted); font: 700 11px Arial, sans-serif; letter-spacing: .08em; text-transform: uppercase; }
+		.field { padding: 16px 0; border-top: 1px solid var(--line); }
+		.field:first-of-type { border-top: 0; padding-top: 0; }
+		label { display: flex; justify-content: space-between; gap: 12px; margin-bottom: 9px; font-weight: 700; }
+		output, .value { color: var(--green); font: 700 1rem Arial, sans-serif; }
+		select, input[type="range"] { width: 100%; }
+		select { padding: 11px 12px; border: 1px solid #bfcac1; border-radius: 0; color: var(--ink); background: #fff; }
+		input[type="range"] { accent-color: var(--green); cursor: pointer; }
+		.range-notes { display: flex; justify-content: space-between; color: var(--muted); font: 11px Arial, sans-serif; }
+		.fixed-distance { display: flex; justify-content: space-between; align-items: center; gap: 14px; padding: 13px 0 2px; color: var(--muted); }
+		.fixed-distance strong { color: var(--ink); font: 700 1.2rem Arial, sans-serif; }
+		.microcopy { margin: 4px 0 0; color: var(--muted); font: 12px/1.45 Arial, sans-serif; }
+		.canvas-wrap { overflow: hidden; }
+		.canvas-head { display: flex; justify-content: space-between; gap: 16px; padding: 19px 22px; border-bottom: 1px solid var(--line); }
+		.canvas-head h2 { margin: 0; font-size: 1.35rem; }
+		.badge { padding: 5px 8px; color: var(--green-deep); background: #e6f0c9; font: 700 11px Arial, sans-serif; text-transform: uppercase; letter-spacing: .06em; }
+		.diagram { position: relative; min-height: 380px; overflow: hidden; background: #dce9df; }
+		.diagram::before { content: ""; position: absolute; inset: 0; opacity: .42; background-image: linear-gradient(#c0d4c5 1px, transparent 1px), linear-gradient(90deg, #c0d4c5 1px, transparent 1px); background-size: 32px 32px; }
+		.compound { position: absolute; inset: 55px 13%; border: 10px solid #7f9187; background: #e9efe7; box-shadow: inset 0 0 0 3px #52675c; }
+		.wall-label { position: absolute; top: -29px; left: 0; color: #52675c; font: 700 11px Arial, sans-serif; letter-spacing: .08em; text-transform: uppercase; }
+		.block { position: absolute; inset: 47px 50px; display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; }
+		.cell { display: grid; place-items: center; min-height: 72px; border: 2px solid #8aa092; background: #d3e2d4; color: #52675c; font: 700 11px Arial, sans-serif; letter-spacing: .06em; text-align: center; }
+		.signal { position: absolute; left: 5%; top: 50%; width: 37%; height: 2px; transform-origin: left center; background: var(--amber); opacity: .35; }
+		.signal::after { content: ""; position: absolute; right: -5px; top: -4px; width: 10px; height: 10px; border-radius: 50%; background: var(--amber); }
+		.wave { position: absolute; left: 6%; top: calc(50% - 92px); z-index: 1; width: 74px; height: 184px; border: 4px solid var(--amber); border-left-color: transparent; border-radius: 50%; opacity: var(--wave-opacity, .8); transform: scale(var(--wave-scale, 1)); animation: wave-travel var(--wave-duration, 2.4s) linear infinite; filter: drop-shadow(0 0 3px rgba(201, 121, 50, .45)); }
+		.wave:nth-child(5) { animation-delay: -.6s; }
+		.wave:nth-child(6) { animation-delay: -1.2s; }
+		.wave:nth-child(7) { animation-delay: -1.8s; }
+		.wave:nth-child(8) { animation-delay: -2.4s; }
+		@keyframes wave-travel { 0% { translate: 0 0; scale: .7; opacity: 0; } 10% { opacity: var(--wave-opacity, .8); } 90% { opacity: var(--wave-opacity, .8); } 100% { translate: 29vw 0; scale: var(--wave-scale, 1); opacity: 0; } }
+		@media (max-width: 520px) { .wave { top: calc(50% - 72px); width: 54px; height: 144px; } }
+		@media (prefers-reduced-motion: reduce) { .wave { animation-play-state: paused; } }
+		.source { position: absolute; left: 4%; top: calc(50% - 15px); z-index: 1; display: grid; place-items: center; width: 31px; height: 31px; border: 2px solid var(--amber); border-radius: 50%; background: #fff3dc; color: var(--amber); font: 700 14px Arial, sans-serif; }
+		.source-text { position: absolute; left: 2.5%; top: calc(50% + 25px); color: #7a4c2b; font: 700 10px Arial, sans-serif; text-transform: uppercase; }
+		.result-grid { display: grid; grid-template-columns: repeat(3, 1fr); border-top: 1px solid var(--line); }
+		.metric { padding: 17px 20px; border-right: 1px solid var(--line); }
+		.metric:last-child { border-right: 0; }
+		.metric span { display: block; color: var(--muted); font: 11px Arial, sans-serif; text-transform: uppercase; letter-spacing: .07em; }
+		.metric strong { display: block; margin-top: 5px; font: 700 1.55rem Arial, sans-serif; }
+		.reading { margin: 24px 0; padding: 20px; border: 1px solid var(--line); background: #eef3e8; }
+		.reading h2 { margin: 0 0 7px; font-size: 1.45rem; }
+		.reading p { margin: 0; color: #40514a; }
+		.reading.safe { border-color: #b4d188; background: #edf6d9; }
+		.reading.warn { border-color: #e1c083; background: #fff3dc; }
+		.formula { padding: 17px 0 0; color: var(--muted); border-top: 1px solid var(--line); font: 12px/1.6 Arial, sans-serif; }
+		.formula code { color: var(--green-deep); font-weight: 700; }
+		footer { display: flex; justify-content: space-between; gap: 24px; margin-top: 27px; padding-top: 17px; border-top: 1px solid var(--line); color: var(--muted); font: 12px/1.5 Arial, sans-serif; }
+		@media (max-width: 850px) { .masthead, footer { display: block; } .intro { margin-top: 18px; } .workspace { grid-template-columns: 1fr; } }
+		@media (max-width: 520px) { .shell { padding: 18px 14px 40px; } .diagram { min-height: 310px; } .compound { inset: 52px 9% 48px; } .block { inset: 38px 22px; gap: 7px; } .result-grid { grid-template-columns: 1fr; } .metric { border-right: 0; border-bottom: 1px solid var(--line); } .metric:last-child { border-bottom: 0; } footer { margin-top: 20px; } }
+	</style>
+</head>
+<body>
+	<main class="shell">
+		<header class="masthead">
+			<div>
+				<div class="kicker">Proyecto de ingeniería · control pasivo</div>
+				<h1>La señal termina donde empieza el diseño.</h1>
+			</div>
+			<p class="intro">Simulador educativo para estudiar propagación, pérdida de trayectoria y atenuación confinada en una infraestructura crítica.</p>
+		</header>
+
+		<aside class="notice" role="note">
+			<strong>Uso responsable</strong>
+			Este modelo no emite radiofrecuencia ni controla equipos físicos. Está limitado al análisis de blindaje pasivo; está prohibido construir, adquirir o usar inhibidores activos. Toda validación real requiere autorización institucional y revisión de la SIT.
+		</aside>
+
+		<section class="workspace" aria-label="Simulador de atenuación pasiva">
+			<section class="panel controls" aria-labelledby="controls-title">
+				<h2 class="panel-title" id="controls-title"><span>Parámetros</span><span class="eyebrow">Entrada</span></h2>
+				<div class="field">
+					<label for="technology">Tecnología <span id="tech-value" class="value">2G</span></label>
+					<select id="technology">
+						<option value="2G">2G · 850 MHz</option>
+						<option value="3G">3G · 1900 MHz</option>
+						<option value="4G">4G · 2100 MHz</option>
+						<option value="5G-sub6">5G Sub-6 · 3.5 GHz</option>
+						<option value="5G-mmwave">5G mmWave · 28 GHz</option>
+					</select>
+				</div>
+				<div class="field">
+					<label for="material">Material predominante <span id="material-value" class="value">Concreto reforzado</span></label>
+					<select id="material">
+						<option value="concrete">Concreto reforzado</option>
+						<option value="brick">Ladrillo</option>
+						<option value="mesh">Malla de acero / jaula de Faraday</option>
+					</select>
+					<p class="microcopy" id="material-copy">Atenuación didáctica alta; el resultado real depende de humedad, juntas, ventanas y geometría.</p>
+				</div>
+				<div class="field">
+					<label for="thickness">Grosor efectivo del muro <output id="thickness-value" for="thickness">0.30 m</output></label>
+					<input id="thickness" type="range" min="0.10" max="1.50" step="0.05" value="0.30">
+					<div class="range-notes"><span>0.10 m</span><span>1.50 m</span></div>
+				</div>
+				<div class="field">
+					<div class="fixed-distance"><span>Distancia de evaluación fija</span><strong>50 m</strong></div>
+					<p class="microcopy">Supuesto didáctico editable en el código cuando exista un levantamiento autorizado. Se mantiene fija para comparar solo el efecto del espectro y del muro.</p>
+				</div>
+				<div class="formula">
+					<code>FSPL = 32.44 + 20 log₁₀(f<sub>MHz</sub>) + 20 log₁₀(d<sub>km</sub>)</code><br>
+					λ = c / f &nbsp; · &nbsp; Potencia recibida = potencia transmitida − pérdidas
+				</div>
+			</section>
+
+			<section>
+				<div class="panel canvas-wrap">
+					<div class="canvas-head"><h2>Plano conceptual</h2><span class="badge">Solo pasivo</span></div>
+					<div class="diagram" aria-label="Diagrama animado de ondas atenuándose antes de llegar al recinto blindado">
+						<div class="source" aria-hidden="true">RF</div><div class="source-text">fuente exterior</div><div class="signal" aria-hidden="true"></div><div class="wave" aria-hidden="true"></div><div class="wave" aria-hidden="true"></div><div class="wave" aria-hidden="true"></div><div class="wave" aria-hidden="true"></div>
+						<div class="compound"><span class="wall-label">Perímetro de control</span><div class="block"><div class="cell">MÓDULO A</div><div class="cell">MÓDULO B</div><div class="cell">MÓDULO C</div><div class="cell">ÁREA COMÚN</div><div class="cell">SERVICIOS</div><div class="cell">PATIO</div></div></div>
+					</div>
+					<div class="result-grid">
+						<div class="metric"><span>Frecuencia</span><strong id="frequency-result">850 MHz</strong></div>
+						<div class="metric"><span>Longitud de onda</span><strong id="wavelength-result">0.35 m</strong></div>
+						<div class="metric"><span>Pérdida total</span><strong id="loss-result">---</strong></div>
+					</div>
+				</div>
+				<div class="reading" id="reading" aria-live="polite">
+					<h2 id="reading-title">Ajusta los parámetros para iniciar</h2>
+					<p id="reading-copy">El simulador compara la potencia recibida con un umbral educativo de comunicación de -95 dBm. No representa una autorización ni sustituye una medición de campo.</p>
+				</div>
+			</section>
+		</section>
+
+		<footer><span>Modelo académico · resultados aproximados</span><span>Umbral de referencia: -95 dBm · sin emisión activa</span></footer>
+	</main>
+	<script>
+		const technologies = {
+			'2G': { label: '2G', mhz: 850, tx: -25, base: 2.0, note: 'La onda larga difracta y penetra mejor; requiere mayor masa o múltiples capas.' },
+			'3G': { label: '3G', mhz: 1900, tx: -25, base: 2.7, note: 'La propagación es moderada y responde de forma apreciable a la densidad del muro.' },
+			'4G': { label: '4G', mhz: 2100, tx: -25, base: 3.1, note: 'La longitud de onda corta presenta una degradación más marcada ante obstáculos.' },
+			'5G-sub6': { label: '5G Sub-6', mhz: 3500, tx: -25, base: 4.4, note: 'El coeficiente didáctico de atenuación es mayor y el alcance efectivo se reduce.' },
+			'5G-mmwave': { label: '5G mmWave', mhz: 28000, tx: -25, base: 8.5, note: 'Las ondas milimétricas son muy sensibles al bloqueo; el resultado exige validación de campo.' }
+		};
+		const materials = {
+			concrete: { label: 'Concreto reforzado', coefficient: 11, copy: 'Atenuación didáctica alta; el resultado real depende de humedad, juntas, ventanas y geometría.' },
+			brick: { label: 'Ladrillo', coefficient: 7, copy: 'Atenuación intermedia; la mampostería y sus juntas pueden crear rutas de fuga.' },
+			mesh: { label: 'Malla de acero / jaula de Faraday', coefficient: 20, copy: 'La continuidad eléctrica y la puesta a tierra son críticas; una malla incompleta no equivale a una jaula.' }
+		};
+		const distanceKm = 0.05;
+		const threshold = -95;
+		const technology = document.querySelector('#technology');
+		const material = document.querySelector('#material');
+		const thickness = document.querySelector('#thickness');
+		const diagram = document.querySelector('.diagram');
+		const elements = {
+			tech: document.querySelector('#tech-value'), material: document.querySelector('#material-value'), copy: document.querySelector('#material-copy'), thickness: document.querySelector('#thickness-value'), frequency: document.querySelector('#frequency-result'), wavelength: document.querySelector('#wavelength-result'), loss: document.querySelector('#loss-result'), reading: document.querySelector('#reading'), title: document.querySelector('#reading-title'), text: document.querySelector('#reading-copy')
+		};
+
+		function update() {
+			const tech = technologies[technology.value];
+			const selectedMaterial = materials[material.value];
+			const wallThickness = Number(thickness.value);
+			const fspl = 32.44 + 20 * Math.log10(tech.mhz) + 20 * Math.log10(distanceKm);
+			const wallLoss = tech.base * selectedMaterial.coefficient * wallThickness;
+			const totalLoss = fspl + wallLoss;
+			const received = tech.tx - totalLoss;
+			const wavelength = 299792458 / (tech.mhz * 1000000);
+			const belowThreshold = received < threshold;
+			const signalStrength = Math.max(0.65, Math.min(1.25, (received + 140) / 100));
+			const waveDuration = Math.max(1.8, Math.min(4.2, 4.4 - signalStrength * 2.2));
+
+			elements.tech.textContent = tech.label;
+			elements.material.textContent = selectedMaterial.label;
+			elements.copy.textContent = selectedMaterial.copy;
+			elements.thickness.textContent = `${wallThickness.toFixed(2)} m`;
+			elements.frequency.textContent = `${tech.mhz >= 1000 ? (tech.mhz / 1000).toFixed(1) + ' GHz' : tech.mhz + ' MHz'}`;
+			elements.wavelength.textContent = wavelength >= 0.1 ? `${wavelength.toFixed(2)} m` : `${(wavelength * 100).toFixed(1)} cm`;
+			elements.loss.textContent = `${totalLoss.toFixed(1)} dB`;
+			diagram.style.setProperty('--wave-scale', signalStrength.toFixed(2));
+			diagram.style.setProperty('--wave-opacity', (0.25 + signalStrength * 0.65).toFixed(2));
+			diagram.style.setProperty('--wave-duration', `${waveDuration.toFixed(2)}s`);
+			elements.reading.className = `reading ${belowThreshold ? 'safe' : 'warn'}`;
+			elements.title.textContent = belowThreshold ? 'Señal bajo el umbral educativo' : 'Señal aún sobre el umbral';
+			elements.text.textContent = `${tech.note} Potencia estimada en el interior: ${received.toFixed(1)} dBm frente a ${threshold} dBm. Este resultado es una aproximación académica y no una certificación de cobertura, seguridad o cumplimiento legal.`;
+		}
+		[technology, material, thickness].forEach(control => control.addEventListener('input', update));
+		update();
+	</script>
+</body>
+</html>
